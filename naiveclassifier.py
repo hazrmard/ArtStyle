@@ -59,5 +59,6 @@ class NaiveClassifier:
         Returns:
         * The accuracy of prediction (float).
         """
-        correct = sum([1 if self.predict(x)==y else 0 for x, y in zip(X, Y)])
-        return correct / len(X)
+        predictions = [self.predict(x) for x in X]
+        correct = sum([1 if pred==y else 0 for pred, y in zip(predictions, Y)])
+        return correct / len(X), predictions

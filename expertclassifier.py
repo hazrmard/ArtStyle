@@ -33,7 +33,16 @@ class ExpertClassifier(NaiveClassifier):
 
 
     def predict(self, x: np.ndarray) -> int:
-        pass
+        avg = self.avg_color(x)
+        blur = self.blurriness(x, 1.0)
+        var = self.variance(x)
+
+        if blur < 100 and var > 4500:
+            return 'Romanticism'
+        elif blur < 100 and avg < 80:
+            return 'Baroque'
+        else:
+            return 'Impressionism'
 
 
     def avg_color(self, x: np.array, xmin: int=None, xmax: int=None, \
@@ -43,8 +52,10 @@ class ExpertClassifier(NaiveClassifier):
 
     def blurriness(self, x: np.array, std: float, xmin: int=None, xmax: int=None, \
                    ymin: int=None, ymax: int=None) -> float:
-        blurred = ndimage.filters.gaussian_filter(x[ymin:ymax, xmin:xmax], std)
-        return np.abs(x[ymin:ymax, xmin:xmax] - blurred)
+        x = x[ymin:ymax, xmin:xmax]
+        npix = np.prod(x.shape)
+        blurred = ndimage.filters.gaussian_filter(x, std)
+        return np.sum(np.abs(x - blurred)) / npix
 
 
     def variance(self, x: np.array, xmin: int=None, xmax: int=None, \
