@@ -15,10 +15,9 @@ import multiprocessing as mp
 from argparse import ArgumentParser
 import os
 import sys
-import numpy as np
 import csv
+import numpy as np
 from scipy import ndimage
-from imageio import imread
 import cv2
 
 
@@ -42,20 +41,27 @@ def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
             break
         else:
             try:
-                im = cv2.imread(os.path.join(dir, data), cv2.IMREAD_COLOR)
+                style, fname = data
+                im = cv2.imread(os.path.join(dir, fname), cv2.IMREAD_COLOR)
                 if im is not None:
                     result = extract(im)
-                    outq.put((data, result))
+                    outq.put(data + result)
                 else:
-                    raise Exception('Could not read image:{0:20s}'.format(data))
+                    raise Exception('Could not read image:{0:20s}'.format(fname))
             except Exception as exp:
                 outq.put(exp)
 
 
 
 def extract(im: np.ndarray):
-    im = cv2.resize(im, (128, 128))
-    return im.shape
+    # im = cv2.resize(im, (128, 128))
+    numel = np.prod(im.shape)
+    mean = ndimage.mean(im)
+    std = ndimage.standard_deviation(im)
+    histB = list(ndimage.measurements.histogram(im[:,:,0], 0, 255, 3) / numel)
+    histG = list(ndimage.measurements.histogram(im[:,:,1], 0, 255, 3) / numel)
+    histR = list(ndimage.measurements.histogram(im[:,:,2], 0, 255, 3) / numel)
+    return [mean, std] + histB + histG + histR
 
 
 
@@ -67,9 +73,9 @@ if __name__ == '__main__':
     with open(args.input, 'r') as f:
         reader = csv.reader(f)
         next(reader)
-        fnames = [r[1] for r in reader]
+        rows = list(reader)
     
-    for i in (fnames[:300] + ([None] * args.n)):
+    for i in (rows + ([None] * args.n)):
         inq.put(i)
 
     for i in range(args.n):
@@ -78,11 +84,12 @@ if __name__ == '__main__':
         process.start()
     
     if args.output != sys.stdout:
-        args.output = open(args.output, 'w', encoding='utf-8')
+        args.output = open(args.output, 'w', encoding='utf-8', newline='')
+    writer = csv.writer(args.output)
  
     num_none = 0
     i = 0
-    N = len(fnames)
+    N = len(rows)
     while num_none < args.n:
         data = outq.get()
         if data is None:
@@ -93,7 +100,8 @@ if __name__ == '__main__':
             if isinstance(data, Exception):
                 print(data, file=sys.stderr)
             else:
-                print(i, data, file=args.output)
+                writer.writerow(data)
+                # print(i, data, file=args.output)
             i += 1
     print('\nDone. Joining processes...', file=sys.stderr)
     
