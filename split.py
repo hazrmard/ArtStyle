@@ -1,3 +1,15 @@
+"""
+This script splits a csv file containing image filenames and labels into
+a training and a test set. The labels are the painting styles.
+
+The csv file must be of the format:
+
+style   |   filename
+----------------------
+style1  |   filename1
+style2  |   filename2
+...
+"""
 from argparse import ArgumentParser
 import pandas as pd
 import numpy as np

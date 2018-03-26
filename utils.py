@@ -2,7 +2,9 @@
 Defines some IO functions to help with reading large number of files.
 """
 from typing import Iterable
+import os
 import matplotlib.pyplot as plt
+from matplotlib.image import AxesImage
 from imageio import imread
 import numpy as np
 
@@ -17,16 +19,18 @@ class ImageStreamer(list):
     * ImageStreamer[slice] -> ImageStreamer
     """
 
-    def __init__(self, fnames: Iterable[str]):
+    def __init__(self, fnames: Iterable[str], basedir: str=''):
+        self.basedir = basedir
         super().__init__(fnames)
     
 
     def __getitem__(self, x):
         fnames = super().__getitem__(x)
         if isinstance(fnames, list):
-            return ImageStreamer(fnames)
+            return ImageStreamer(fnames, basedir=self.basedir)
         elif isinstance(fnames, str):
-            return imread(fnames)
+            path = os.path.join(self.basedir, fnames)
+            return imread(path)
         else:
             print('Hey', x)
     
@@ -38,7 +42,21 @@ class ImageStreamer(list):
 
 
 
-def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=[], cbar: bool=True, norm=False):
+def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=[], cbar: bool=True, \
+    norm=False) -> AxesImage:
+    """
+    Draws a heatmap of a confusion matrix.
+
+    Args:
+    * cmatrix (np.ndarray): The confusion matrix.
+    * labels (Iterable[str]): A sequence of labels to put on each axis corresponding
+    to the classes. If empty, no labels placed.
+    * cbar (bool): Whether to draw a colorbar with the heatmap.
+    * norm (bool): Whether to normalize all values between 0 and 1.
+
+    Returns:
+    The axis on which the heatmap was drawn.
+    """
     if norm:
         im = plt.imshow(cmatrix, cmap=plt.cm.get_cmap('Blues'), vmin=0, vmax=1)
     else:

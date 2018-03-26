@@ -35,15 +35,15 @@ class NaiveClassifier:
         self.majority_label = mode
     
 
-    def predict(self, x: np.ndarray) -> int:
+    def predict(self, x: np.ndarray) -> str:
         """
         Predicts label of a single instance.
 
         Args:
-        * x (np.ndarray): A single instance represented as an array.
+        * x (np.ndarray): A single image instance represented as an array.
 
         Returns:
-        * The predicted label (int).
+        * The predicted label i.e. the majority label in training data.
         """
         return self.majority_label
     

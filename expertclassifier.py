@@ -1,8 +1,8 @@
 """
 An *expert* classifier which uses hardcoded features to generate labels. Features
-are determined at design time by humans. There is no learning phase.
+are determined at design time by humans. There is no learning/training phase.
 """
-from typing import Iterable, Tuple
+from typing import Iterable
 import numpy as np
 from scipy import ndimage
 from naiveclassifier import NaiveClassifier
@@ -16,23 +16,23 @@ class ExpertClassifier(NaiveClassifier):
 
     def __init__(self, **hyperparameters):
         super().__init__(**hyperparameters)
-    
-
-    @property
-    def xdim(self) -> int:
-        return self.hyperparameters.get('shape')[0]
-    
-
-    @property
-    def ydim(self) -> int:
-        return self.hyperparameters.get('shape')[1]
 
 
     def train(self, X: Iterable[np.ndarray], Y: np.ndarray, **hyperparameters):
         pass
 
 
-    def predict(self, x: np.ndarray) -> int:
+    def predict(self, x: np.ndarray) -> str:
+        """
+        Takes an array representing pixel intensities, measures some statistics,
+        and uses hard-coded thresholds to determine label.
+
+        Args:
+        * x (np.ndarray): An array of image pixel intensities.
+
+        Returns:
+        * A string label corresponding to one of art styles.
+        """
         avg = self.avg_color(x)
         blur = self.blurriness(x, 1.0)
         var = self.variance(x)
