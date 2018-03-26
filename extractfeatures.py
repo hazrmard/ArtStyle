@@ -45,7 +45,7 @@ def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
                 im = cv2.imread(os.path.join(dir, data), cv2.IMREAD_COLOR)
                 if im is not None:
                     result = extract(im)
-                    outq.put(result)
+                    outq.put((data, result))
                 else:
                     raise Exception('Could not read image:{0:20s}'.format(data))
             except Exception as exp:
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         next(reader)
         fnames = [r[1] for r in reader]
     
-    for i in (fnames[:100] + ([None] * args.n)):
+    for i in (fnames[:300] + ([None] * args.n)):
         inq.put(i)
 
     for i in range(os.cpu_count()):
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     num_none = 0
     i = 0
     N = len(fnames)
-    while num_none < os.cpu_count():
+    while num_none < args.n:
         data = outq.get()
         if data is None:
             num_none += 1
