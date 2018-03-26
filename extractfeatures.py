@@ -72,7 +72,7 @@ if __name__ == '__main__':
     for i in (fnames[:300] + ([None] * args.n)):
         inq.put(i)
 
-    for i in range(os.cpu_count()):
+    for i in range(args.n):
         process = mp.Process(target=worker, args=(inq, outq, args.dir))
         processes.append(process)
         process.start()
@@ -95,7 +95,7 @@ if __name__ == '__main__':
             else:
                 print(i, data, file=args.output)
             i += 1
-    print()
+    print('\nDone. Joining processes...', file=sys.stderr)
     
     for process in processes:
         process.join()
