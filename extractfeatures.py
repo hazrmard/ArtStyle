@@ -9,6 +9,25 @@ style   |   filename
 style1  |   filename1
 style2  |   filename2
 ...
+
+Outputs a CSV file (with no headers) containing style, filename, and features
+calculated in the extract() function.
+
+style1  |   filename1   | feature   |   feature |   feature
+style2  |   filename2   | feature   |   feature |   feature
+...
+
+usage:
+
+```
+>> python extractfeatures.py IMAGE_DIRECTORY -n NUM_PROCESSES --input CSV --output CSV
+```
+
+Requires:
+
+* numpy
+* scipy
+* opencv
 """
 
 import multiprocessing as mp
@@ -34,6 +53,14 @@ parser.add_argument('--output', help='Output CSV file that contains features + l
 
 
 def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
+    """
+    The function executed by each process.
+
+    Args:
+    * inq (mp.Queue): A queue containing tuples of (style, filename) to process.
+    * outq (mp.Queue): A queue in which function puts a list of features.
+    * dir (str): the path where the filenames exist
+    """
     while True:
         data = inq.get()
         if data is None:
@@ -54,13 +81,22 @@ def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
 
 
 def extract(im: np.ndarray):
+    """
+    The function called by worker on each image. Returns a list of features.
+
+    Args:
+    * im (np.ndarray): An array of pixel values.
+
+    Returns:
+    * A list of features
+    """
     # im = cv2.resize(im, (128, 128))
     numel = np.prod(im.shape)
     mean = ndimage.mean(im)
     std = ndimage.standard_deviation(im)
-    histB = list(ndimage.measurements.histogram(im[:,:,0], 0, 255, 3) / numel)
-    histG = list(ndimage.measurements.histogram(im[:,:,1], 0, 255, 3) / numel)
-    histR = list(ndimage.measurements.histogram(im[:,:,2], 0, 255, 3) / numel)
+    histB = list(ndimage.measurements.histogram(im[:,:,0], 0, 255, 32) / numel)
+    histG = list(ndimage.measurements.histogram(im[:,:,1], 0, 255, 32) / numel)
+    histR = list(ndimage.measurements.histogram(im[:,:,2], 0, 255, 32) / numel)
     return [mean, std] + histB + histG + histR
 
 
