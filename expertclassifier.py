@@ -18,7 +18,7 @@ class ExpertClassifier(NaiveClassifier):
         super().__init__(**hyperparameters)
 
 
-    def train(self, X: Iterable[np.ndarray], Y: np.ndarray, **hyperparameters):
+    def train(self, X: Iterable[np.ndarray], Y: np.ndarray):
         pass
 
 

@@ -6,3 +6,4 @@ __pycache__/
 img/
 *.xlsx
 Evil-AI-Painter.ipynb
+data/features.csv

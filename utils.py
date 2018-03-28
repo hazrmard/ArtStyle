@@ -37,7 +37,7 @@ class ImageStreamer(list):
 
     def __iter__(self):
         for fname in super().__iter__():
-            yield imread(fname)
+            yield imread(os.path.join(self.basedir, fname))
 
 
 

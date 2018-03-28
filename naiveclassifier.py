@@ -20,7 +20,7 @@ class NaiveClassifier:
     def __init__(self, **hyperparameters):
         self.hyperparameters = hyperparameters
 
-    def train(self, X: Iterable[np.ndarray], Y: Iterable[int], **hyperparameters):
+    def train(self, X: Iterable[np.ndarray], Y: Iterable[int]):
         """
         Train the classifier from features (X) and labels (Y).
 
@@ -28,7 +28,6 @@ class NaiveClassifier:
         * X (Iterable[np.ndarray]): A sequence of instances represented as arrays.
         * Y (Iterable[int]): A sequence of labels for corresponding instances.
         """
-        self.hyperparameters.update(hyperparameters)
         (_, idx, counts) = np.unique(Y, return_index=True, return_counts=True)
         index = idx[np.argmax(counts)]
         mode = Y[index]
