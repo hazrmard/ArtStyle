@@ -1,8 +1,9 @@
 """
 Defines some IO functions to help with reading large number of files.
 """
-from typing import Iterable
+from typing import Iterable, Callable, Set
 import os
+import multiprocessing as mp
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
 from imageio import imread
@@ -41,8 +42,7 @@ class ImageStreamer(list):
 
 
 
-
-def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=[], cbar: bool=True, \
+def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=(), cbar: bool=True, \
     norm=False) -> AxesImage:
     """
     Draws a heatmap of a confusion matrix.
@@ -67,3 +67,25 @@ def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=[], cbar: bool=True,
     plt.xticks(tick_marks, labels, rotation=90)
     plt.yticks(tick_marks, labels)
     return im
+
+
+
+def get_image_stream(basedir: str, subset: Set[str]=None) -> ImageStreamer:
+    """
+    Creates an ImageStreamer from all images in a directory optionally filtered
+    using a subset.
+
+    Args:
+    * basedir (str): Directory containing images.
+    * subset (Set): Set of images to include - may or may not exist in basedir. If
+    empty, all images in basedir are used.
+
+    Returns:
+    * An ImageStreamer from the images in basedir optionally filtered.
+    """
+    fnames = set(os.listdir(basedir))
+    if subset is not None:
+        avail_fnames = fnames & subset          # downloaded filenames in training split
+    else:
+        avail_fnames = fnames
+    return ImageStreamer(avail_fnames, basedir=basedir)

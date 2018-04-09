@@ -1,9 +1,11 @@
-LaTeX/
-Word/
-*.pdf
 __pycache__/
 .ipynb_checkpoints/
+output/
 img/
+
+*.pdf
 *.xlsx
-Evil-AI-Painter.ipynb
+*.ini
+
 data/features.csv
+data/cat.csv

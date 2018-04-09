@@ -1,8 +1,9 @@
 """
 Runs a feature extraction function on a single node with multiple cores.
-Requires a csv file containing file names and labels.
+Requires a csv file containing file names and labels. Multiple feature extraction
+functions can be defined in this file and chosen from the commandline at runtime.
 
-The csv file must be of the format:
+The input csv file must be of the format:
 
 style   |   filename
 ----------------------
@@ -20,7 +21,8 @@ style2  |   filename2   | feature   |   feature |   feature
 usage:
 
 ```
->> python extractfeatures.py IMAGE_DIRECTORY -n NUM_PROCESSES --input CSV --output CSV
+>> python extractfeatures.py IMAGE_DIRECTORY -n NUM_PROCESSES --input CSV
+                             --output CSV --func FEATURE_FUNCTION --truncate N_POINTS
 ```
 
 Requires:
@@ -31,6 +33,7 @@ Requires:
 """
 
 import multiprocessing as mp
+from typing import Callable
 from argparse import ArgumentParser
 import os
 import sys
@@ -38,6 +41,7 @@ import csv
 import numpy as np
 from scipy import ndimage
 import cv2
+from expertclassifier import ExpertClassifier
 
 
 
@@ -49,18 +53,22 @@ parser.add_argument('--input', default='data/train.csv', help='CSV file containi
                     style labels and filenames.' )
 parser.add_argument('--output', help='Output CSV file that contains features + label.',\
                     default=sys.stdout)
+parser.add_argument('--func', help='Function to call on each image to extract features.',\
+                    default='stat_extract')
+parser.add_argument('--truncate', metavar='N', help='Limit to first N entries in input CSV',\
+                    type=int, default=None)
 
 
 
-def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
+def worker(func: Callable, inq: mp.Queue, outq: mp.Queue, dirpath: str):
     """
     The function executed by each process.
 
     Args:
     * inq (mp.Queue): A queue containing tuples of (style, filename) to process.
     * outq (mp.Queue): A queue in which function puts a list of features.
-    * dir (str): the path where the filenames exist
     """
+    face_cascade = cv2.CascadeClassifier('data/lbpcascade_frontalface_improved.xml')
     while True:
         data = inq.get()
         if data is None:
@@ -69,9 +77,9 @@ def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
         else:
             try:
                 style, fname = data
-                im = cv2.imread(os.path.join(dir, fname), cv2.IMREAD_COLOR)
+                im = cv2.imread(os.path.join(dirpath, fname), cv2.IMREAD_COLOR)
                 if im is not None:
-                    result = extract(im)
+                    result = func(im, face_cascade)
                     outq.put(data + result)
                 else:
                     raise Exception('Could not read image:{0:20s}'.format(fname))
@@ -80,9 +88,11 @@ def worker(inq: mp.Queue, outq: mp.Queue, dir: str):
 
 
 
-def extract(im: np.ndarray):
+def stat_extract(im: np.ndarray, *args):
     """
     The function called by worker on each image. Returns a list of features.
+    Features computed are image statistics like mean, variance, and channel
+    histograms.
 
     Args:
     * im (np.ndarray): An array of pixel values.
@@ -101,21 +111,49 @@ def extract(im: np.ndarray):
 
 
 
+def feat_extract(im: np.ndarray, *args):
+    """
+    The function called by worker on each image. Returns a list of features.
+    Features computed are edges and face detections.
+
+    Args:
+    * im (np.ndarray): An array of pixel values.
+
+    Returns:
+    * A list of features
+    """
+    max_faces = 3
+    features = np.zeros(1 + 3*max_faces)
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    H, W = gray.shape
+    face_cascade = args[0]
+    features[0] = ExpertClassifier.blurriness(im)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)[:max_faces]
+    for i, (x,y,w,h) in faces:
+        features[3*i+1] = (x + w) / W
+        features[3*i+2] = (y + h) / H
+        features[3*i+3] = (w * h) / (W * H)
+    return list(features)
+
+
+
 if __name__ == '__main__':
     inq, outq = mp.Queue(), mp.Queue()
     processes = []
 
     args = parser.parse_args()
+    args.func = eval(args.func)
+
     with open(args.input, 'r') as f:
         reader = csv.reader(f)
         next(reader)
-        rows = list(reader)
+        rows = list(reader)[:args.truncate]
     
     for i in (rows + ([None] * args.n)):
         inq.put(i)
 
     for i in range(args.n):
-        process = mp.Process(target=worker, args=(inq, outq, args.dir))
+        process = mp.Process(target=worker, args=(args.func, inq, outq, args.dir))
         processes.append(process)
         process.start()
     

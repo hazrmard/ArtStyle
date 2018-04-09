@@ -45,12 +45,14 @@ class ExpertClassifier(NaiveClassifier):
             return 'Impressionism'
 
 
+    @classmethod
     def avg_color(self, x: np.array, xmin: int=None, xmax: int=None, \
                   ymin: int=None, ymax: int=None) -> float:
         return np.mean(x[ymin:ymax, xmin:xmax])
     
 
-    def blurriness(self, x: np.array, std: float, xmin: int=None, xmax: int=None, \
+    @classmethod
+    def blurriness(self, x: np.array, std: float=1, xmin: int=None, xmax: int=None, \
                    ymin: int=None, ymax: int=None) -> float:
         x = x[ymin:ymax, xmin:xmax]
         npix = np.prod(x.shape)
@@ -58,6 +60,7 @@ class ExpertClassifier(NaiveClassifier):
         return np.sum(np.abs(x - blurred)) / npix
 
 
+    @classmethod
     def variance(self, x: np.array, xmin: int=None, xmax: int=None, \
                  ymin: int=None, ymax: int=None) -> float:
         return ndimage.measurements.variance(x[ymin:ymax, xmin:xmax])

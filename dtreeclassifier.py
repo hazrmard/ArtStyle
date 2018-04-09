@@ -1,29 +1,26 @@
 """
-A supervised classifier which uses k-Nearest Neighbours to vote on a prediction
-of style for a painting. The nearest beighbours are calculated in feature-space.
-As input, the classifier takes pre-computed feautres from images (and not raw
-pixel arrays).
+A decision tree classifier finds best features to split along until a split
+contains an acceptable number of labels of the same class.
 """
-from typing import Iterable, List
+from typing import Iterable
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
 from naiveclassifier import NaiveClassifier
 
 
 
-class KNNClassifier(KNeighborsClassifier, NaiveClassifier):
+class DTreeClassifier(DecisionTreeClassifier, NaiveClassifier):
     """
-    Implements a k-Nearest Neighbours classifier. Inherits from
-    scipy.neighbors.KNeighborsClassifier.
+    Implements a decision tree classifier based on sklearn.tree.DecisionTreeClassifier.
     """
 
     def __init__(self, **hyperparameters):
         super().__init__(**hyperparameters)
 
 
-    def train(self, X: np.ndarray, Y: List):
+    def train(self, X: np.ndarray, Y: np.ndarray):
         """
-        Training involves simply memorizing features for training data.
+        Training involves finding useful splits across features.
 
         Args:
         * X (np.ndarray): A 2D array where each row is the features corresponding
@@ -31,7 +28,7 @@ class KNNClassifier(KNeighborsClassifier, NaiveClassifier):
         * Y (List): A list of corresponding string labels for features.
         """
         self.fit(X, Y)
-    
+
 
     def predict(self, x: np.ndarray) -> str:
         """
