@@ -7,5 +7,5 @@ img/
 *.xlsx
 *.ini
 
-data/features.csv
-data/cat.csv
+*.csv
+*.ipynb
