@@ -3,7 +3,7 @@ This script converts a single directory of images with different labels into
 a directory of directories where each subdirectory contains images of a single
 class. Requires:
     * elevated permissions.
-    * an input CSV of the form:
+    * an input CSV of the form (with optional columns to the right):
 
         style   |   filename  
         ----------------------
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     with open(args.input, 'r') as f:
         reader = csv.reader(f)
         next(reader)
-        for style, fname in reader:
+        for style, fname, *_ in reader:
             if fname in avail_files:
                 fullsrc = os.path.join(args.imgdir, fname)
                 fulldest = os.path.join(args.outdir, style, fname)
