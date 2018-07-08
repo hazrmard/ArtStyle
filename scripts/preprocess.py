@@ -117,7 +117,7 @@ if __name__ == '__main__':
                     count += 1
                     print('{} images pre-processed.\r'.format(count), end='')
                 else:
-                    logfile.write('')
+                    logfile.write(status)
 
             for p in P:
                 p.join()
