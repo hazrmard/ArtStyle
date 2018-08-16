@@ -9,3 +9,7 @@ img/
 
 *.csv
 *.ipynb
+
+models/
+.gitignore
+.DS_Store
