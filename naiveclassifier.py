@@ -20,6 +20,8 @@ class NaiveClassifier:
     def __init__(self, **hyperparameters):
         self.hyperparameters = hyperparameters
 
+
+
     def train(self, X: Iterable[np.ndarray], Y: Iterable[int]):
         """
         Train the classifier from features (X) and labels (Y).
@@ -32,7 +34,8 @@ class NaiveClassifier:
         index = idx[np.argmax(counts)]
         mode = Y[index]
         self.majority_label = mode
-    
+
+
 
     def predict(self, x: np.ndarray) -> str:
         """
@@ -45,7 +48,8 @@ class NaiveClassifier:
         * The predicted label i.e. the majority label in training data.
         """
         return self.majority_label
-    
+
+
 
     def evaluate(self, X: Iterable[np.ndarray], Y: Iterable[int]) -> float:
         """

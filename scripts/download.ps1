@@ -1,5 +1,5 @@
-# Powershell script that downloads and extracts training and test sets to the home/Downloads
-# folders.
+# Powershell script that downloads and extracts training and test sets to the
+# home/Downloads folders.
 
 # Requirements:
 # - python 3.6+

@@ -1,25 +1,32 @@
 """
+## Categorize
+
 This script converts a single directory of images with different labels into
 a directory of directories where each subdirectory contains images of a single
-class. Requires:
+class. Only creates symbolic links. No copies of images are made. Requires:
+
     * elevated permissions.
-    * an input CSV of the form (with optional columns to the right):
+    * an input CSV of the form (order of columns does not matter):
 
         style   |   filename  
         ----------------------
         style1  |   filename1
         style2  |   filename2
         ...
+
 The output subdirectories contain symbolic links.
 
 Input directory:
+
 ```
 DIR/
     filename1.jpg
     filename2.jpg
     ...
 ```
+
 Output directory:
+
 ```
 OUTDIR/
     style1/
@@ -55,8 +62,12 @@ if __name__ == '__main__':
     avail_files = set(os.listdir(args.imgdir))
     with open(args.input, 'r') as f:
         reader = csv.reader(f)
-        next(reader)
-        for style, fname, *_ in reader:
+        headers = next(reader)
+        style_index = headers.index('style')
+        fname_index = headers.index('filename')
+        for line in reader:
+            style = line[style_index]
+            fname = line[fname_index]
             if fname in avail_files:
                 fullsrc = os.path.join(args.imgdir, fname)
                 fulldest = os.path.join(args.outdir, style, fname)

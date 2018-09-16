@@ -1,13 +1,38 @@
+"""
+## Preprocessing
+
+This script runs on multiple cores. It reads the downloaded images and runs the
+manipulations coded in the `preprocess()` function on each image. Any errors
+are stored in a `logfile` in the destination directory.
+
+The input directory sub-structure is:
+
+    train/
+    test/
+
+The output directory sub-structure is:
+
+    logfile.txt
+    train/
+        cropped/
+        resized/
+    test/
+        cropped/
+        resized/
+"""
 from multiprocessing import Process, Queue, cpu_count
 import os
 import sys
 from argparse import ArgumentParser
 from glob import glob
-from typing import Tuple
+from typing import Tuple, List
 import warnings
 
+import numpy as np
 from PIL import Image
 
+# assuming image source is trusted, removing image size limits
+Image.MAX_IMAGE_PIXELS = np.inf
 warnings.simplefilter('ignore', Image.DecompressionBombWarning)
 
 root = os.path.join(os.path.expanduser('~'), 'Downloads', 'paintings')
@@ -15,10 +40,12 @@ dest = os.path.join(root, 'processed')
 
 parser = ArgumentParser(description='Generate resized + cropped data sets from\
                         downloaded training and testing images.')
-parser.add_argument('--root', default=root, help='Folder containing training and\
-                    testing directories.')
+parser.add_argument('--root', default=root, help='Folder containing "train" and\
+                    "test" directories with images.')
 parser.add_argument('--dest', default=dest, help='Folder to which processed images\
                     are written.')
+parser.add_argument('--redo_log', action='store_true', default=False,\
+                    help='Reprocess+overwrite only files entered in logfile.txt.')
 
 
 
@@ -32,8 +59,8 @@ def preprocess(q: Queue, dest_dirs: Tuple[str], log: Queue):
     * log: A Queue to log when an image is done.
     """
     # preprocessing parameters
-    resize = 300                # resizing square size
-    crop = 300                  # crop square size
+    resize = 128                # resizing square size
+    crop = 128                  # crop square size
     halfsize = int(crop / 2)
     crop_dir, resize_dir = dest_dirs
     
@@ -45,11 +72,12 @@ def preprocess(q: Queue, dest_dirs: Tuple[str], log: Queue):
         fname = os.path.basename(fpath)
 
         try:
+            saved_crop = False
             # Image processing
             im: Image.Image = Image.open(fpath)
             im.load()
             # remove alpha channel
-            if im.mode in ('RGBA', 'P'):
+            if im.mode in ('RGBA', 'P', 'LA'):
                 im = im.convert('RGB')        
             cols, rows = im.size
             cx, cy = int(cols / 2), int(rows / 2)
@@ -57,10 +85,29 @@ def preprocess(q: Queue, dest_dirs: Tuple[str], log: Queue):
             cropped = im.crop(rect)
             resized = im.resize((resize, resize))
             cropped.save(os.path.join(crop_dir, fname))
+            saved_crop = True
             resized.save(os.path.join(resize_dir, fname))
             log.put(1)
         except Exception as e:
-            log.put(('{}: {}'.format(fname, str(e))))
+            if saved_crop:      # remove cropped image if resized cannot be saved
+                os.remove(os.path.join(crop_dir, fname))
+            log.put(('{}: {}\n'.format(fname, str(e))))
+
+
+
+def get_log_fpaths(dir: str, logs: List[str]) -> List[str]:
+    """
+    read logfile and return list of filepaths if they exist in dir.
+    """
+    fpaths = []
+    for entry in logs:
+        index = entry.find(':')
+        if index > 0:
+            fname = entry[:index]
+            fpath = os.path.join(dir, fname)
+            if os.path.isfile(fpath):
+                fpaths.append(fpath)
+    return fpaths
 
 
 
@@ -79,24 +126,36 @@ if __name__ == '__main__':
     test_resized = os.path.join(args.dest, 'test', 'resized')
     crop_dirs = (train_cropped, test_cropped)
     resize_dirs = (train_resized, test_resized)
+    logpath = os.path.join(args.dest, 'logfile.txt')
 
     for dir in [*crop_dirs, *resize_dirs]:
         try:
             os.makedirs(dir)
         except FileExistsError:
-            print('Directory: {} already exists.'.format(dir), file=sys.stderr)
-            exit(-1)
+            if not args.redo_log:
+                print('Directory: {} already exists.'.format(dir), file=sys.stderr)
+                exit(-1)
 
 
     N = cpu_count()
 
-    with open(os.path.join(args.dest, 'logfile.txt'), 'w') as logfile:
+    with open(logpath, 'a+') as logfile:
+
+        if args.redo_log:
+            logfile.seek(0)
+            logs = logfile.read().split('\n')
+            logfile.seek(0)
+
         # loop over training and testing sets separately
         for dir, dest_dirs in zip((train_dir, test_dir), zip(crop_dirs, resize_dirs)):
             print('Directory: {}'.format(dir))
             log = Queue()
             Q = Queue()
-            for fpath in glob(os.path.join(dir, '*.*')):
+            if args.redo_log:
+                fpaths = get_log_fpaths(dir, logs)
+            else:
+                fpaths = glob(os.path.join(dir, '*.*'))
+            for fpath in fpaths:
                 Q.put(fpath)
             for _ in range(N):
                 Q.put(None)
@@ -117,9 +176,12 @@ if __name__ == '__main__':
                     count += 1
                     print('{} images pre-processed.\r'.format(count), end='')
                 else:
+                    print(status)
                     logfile.write(status)
 
             for p in P:
                 p.join()
+            
+        logfile.truncate()
 
     print('\nDone')

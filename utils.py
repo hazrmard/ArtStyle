@@ -1,44 +1,97 @@
 """
 Defines some IO functions to help with reading large number of files.
 """
-from typing import Iterable, Callable, Set
 import os
-import multiprocessing as mp
+from typing import Iterable, Set, List, Tuple
+from configparser import ConfigParser, ExtendedInterpolation
+from collections import namedtuple
+
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
-from imageio import imread
 import numpy as np
+from imageio import imread
+from torch.utils.data import Dataset, DataLoader
+from torch import Tensor
+from sklearn.preprocessing import LabelBinarizer
+
+
 
 class ImageStreamer(list):
     """
-    Overloads a python list to iterate over image files as numpy arrays. The
-    class is instantiated with a list of image file paths. When an image is
-    indexed by an integer, a numpy array of the corresponding np.ndarray is
-    returned.
+    Lazily loads images as numpy arrays. Supports list indexing operations.
 
     * ImageStreamer[integer] -> np.ndarray
     * ImageStreamer[slice] -> ImageStreamer
+
+    Args:
+
+    * `fnames (Iterable[str])`: A sequence of filenames to load.
+    * `root (str)`: The root directory containing the filenames.
     """
 
-    def __init__(self, fnames: Iterable[str], basedir: str=''):
-        self.basedir = basedir
+    def __init__(self, fnames: Iterable[str], root: str=''):
+        self.root = root
         super().__init__(fnames)
-    
+
 
     def __getitem__(self, x):
         fnames = super().__getitem__(x)
         if isinstance(fnames, list):
-            return ImageStreamer(fnames, basedir=self.basedir)
+            return ImageStreamer(fnames, root=self.root)
         elif isinstance(fnames, str):
-            path = os.path.join(self.basedir, fnames)
+            path = os.path.join(self.root, fnames)
             return imread(path)
-        else:
-            print('Hey', x)
     
 
     def __iter__(self):
         for fname in super().__iter__():
-            yield imread(os.path.join(self.basedir, fname))
+            yield imread(os.path.join(self.root, fname))
+
+
+
+class ImageDataSet(Dataset):
+    """
+    A PyTorch compatible dataset. Lazily reads images and their labels. Supports
+    list indexing. Returns a tuple of:
+
+    * `torch.Tensor`: the image array,
+    * `str`: the image label
+
+    Args:
+
+    * `images (ImageStreamer)`: The set of images to load as an `ImageStreamer`.
+    * `labels (List[str])`: A sequence of labels for each image. The string
+    labels are one-hot coded into an array. If a numpy array is passed, the labels
+    are used as-is.
+
+    Attributes:
+
+    * `label_encoder (sklearn.preprocessing.LabelBinarizer)`: Encodes categorical
+    labels in a one-hot format. E.g. ['a', 'b'] => [[1,0],[0,1]]
+    """
+
+    def __init__(self, images: ImageStreamer, labels: Iterable[str]):
+
+        self.label_encoder = None
+        if isinstance(labels, np.ndarray):
+            self.labels = Tensor(labels)
+        else:
+            self.label_encoder = LabelBinarizer()
+            self.labels = Tensor(self.label_encoder.fit_transform(labels))
+
+        self.images = images
+
+        if len(labels) != len(images):
+            raise ValueError('Number of images ({:d}) != number of labels({:d})'
+                             .format(len(images), len(labels)))
+
+
+    def __getitem__(self, idx) -> Tuple[Tensor, Tensor]:
+        return (Tensor(self.images[idx]), self.labels[idx])
+
+
+    def __len__(self) -> int:
+        return len(self.labels)
 
 
 
@@ -85,7 +138,39 @@ def get_image_stream(basedir: str, subset: Set[str]=None) -> ImageStreamer:
     """
     fnames = set(os.listdir(basedir))
     if subset is not None:
-        avail_fnames = fnames & subset          # downloaded filenames in training split
+        avail_fnames = fnames & subset
     else:
         avail_fnames = fnames
-    return ImageStreamer(avail_fnames, basedir=basedir)
+    return ImageStreamer(avail_fnames, root=basedir)
+
+
+
+def get_config(*fnames: str) -> namedtuple:
+    """
+    Reades the config file (.ini) and returns a `namedtuple` where config
+    properties can be accessed by name: `config.prop1...`,
+    """
+    parser = ConfigParser(interpolation=ExtendedInterpolation())
+    parser.read(fnames)
+
+    sections = parser.sections()
+    Config = namedtuple('Config', sections)
+    ConfigDict = {}
+    for s in sections:
+        options = {}
+        for opt, val in parser.items(s):
+            if s == 'paths':
+                val = os.path.expanduser(val)
+                val = os.path.expandvars(val)
+            else:
+                try:
+                    val = int(val)
+                except ValueError:
+                    try:
+                        val = float(val)
+                    except ValueError:
+                        pass
+            options[opt] = val
+        ntpl = namedtuple(s, options.keys())
+        ConfigDict[s] = ntpl(**options)
+    return Config(**ConfigDict)
