@@ -147,7 +147,7 @@ def get_image_stream(basedir: str, subset: Set[str]=None) -> ImageStreamer:
 
 def get_config(*fnames: str) -> namedtuple:
     """
-    Reades the config file (.ini) and returns a `namedtuple` where config
+    Reads the config file (.ini) and returns a `namedtuple` where config
     properties can be accessed by name: `config.prop1...`,
     """
     parser = ConfigParser(interpolation=ExtendedInterpolation())

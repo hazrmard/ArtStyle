@@ -6,6 +6,7 @@ img/
 *.pdf
 *.xlsx
 *.ini
+!config.ini
 
 *.csv
 *.ipynb
