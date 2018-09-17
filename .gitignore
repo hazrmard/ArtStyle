@@ -10,3 +10,4 @@ img/
 
 *.csv
 *.ipynb
+!Demo.ipynb
