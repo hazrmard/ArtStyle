@@ -8,6 +8,7 @@ Defines a prototypical model module. It contains:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from torchvision.datasets import MNIST
 from sklearn.preprocessing import LabelBinarizer
@@ -77,15 +78,75 @@ class Data(MNIST):
 
 
     # Transforms a single label using one-hot coding into a binary array
-    # pylint: disable=E0602
-    # pylint: disable=E1101
-    # pylint: disable=E1102
+    # pylint: disable=E0602,E1101,E1102
     # (^ disables incorrect error warning by pylint)
     binarizer = LabelBinarizer().fit(np.arange(10))
     target_transform = lambda x: torch.tensor(x, dtype=torch.long)
+    target_transform_b = lambda x: torch.tensor(binarizer.transform(x), dtype=torch.long)
 
 
-    def __init__(self, root: str, train: bool=True, download: bool=True):
+    def __init__(self, root: str, train: bool=True, download: bool=True,
+        binarize: bool=False):
         super().__init__(download=download, train=train, root=root,
             transform=self.__class__.transform,
-            target_transform=self.__class__.target_transform)
+            target_transform=self.__class__.target_transform if not binarize \
+                            else self.__class__.target_transform_b)
+
+
+
+class Model:
+    """
+    The `Model` encapsulates the network, the dataset, and the training/evaluation
+    loop.
+
+    Args:
+
+    * `net (torch.nn.Module)`: The network to train.
+    * `criterion (torch.nn.modules.loss._Loss)`: The loss function.
+    * `optimizer (torch.optim.Optimizer)`: The learning algorithm instantiated with
+    `net.parameters()`.
+    * `cuda (bool)`: Whether to use a GPU (if available).
+    """
+
+    def __init__(self, net: nn.Module, criterion: nn.modules.loss._Loss,
+        optimizer: torch.optim.Optimizer, cuda: bool):
+        
+        self.net = net
+        # pylint: disable=E1101
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and cuda)\
+                                    else "cpu")
+        self.criterion = criterion
+        self.optimizer = optimizer
+
+
+    def train(self, dataset: torch.utils.data.Dataset, batch_size: int=10,
+        epochs: int=1):
+        """
+        Train the network using provided hyperparameters.
+
+        Args:
+
+        * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
+        * `batch_size (int)`: Number of instances per minibatch.
+        * `epochs (int)`: Number of times to iterate over dataset.
+        """
+
+        trainloader = DataLoader(dataset, batch_size=batch_size)
+        self.net.to(self.device)
+
+        for epoch in range(epochs):
+            print('Epoch #', epoch)
+            running_loss = 0.
+            for i, (batchX, batchY) in enumerate(trainloader, 1):
+                batchX, batchY = batchX.to(self.device), batchY.to(self.device)
+                
+                self.optimizer.zero_grad()           # clear gradients from prev. step
+                predY = self.net(batchX)             # get predicted labels
+                loss = self.criterion(predY, batchY) # compute loss
+                loss.backward()                      # backpropagate - populate error grad.
+                self.optimizer.step()                # update weights based on gradients
+                
+                running_loss += loss.item()
+                if i % 1000 == 0:
+                    print('Min-batch # {0:4d}\t Loss: {1:3.3f}'.format(i, running_loss / 1000))
+                    running_loss = 0.

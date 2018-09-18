@@ -11,6 +11,7 @@ param(
 
 
 kaggle competitions download -c painter-by-numbers -f train_info.csv.zip -p $root | Out-Host
+kaggle competitions download -c painter-by-numbers -f all_data_info.csv.zip -p $root | Out-Host
 kaggle competitions download -c painter-by-numbers -f train.zip -p $root | Out-Host
 kaggle competitions download -c painter-by-numbers -f test.zip -p $root | Out-Host
 kaggle competitions download -c painter-by-numbers -f replacements_for_corrupted_files.zip -p $root | Out-Host
