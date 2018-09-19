@@ -10,5 +10,5 @@ img/
 
 *.csv
 *.ipynb
-!Demo.ipynb
 !MNIST.ipynb
+!ArtStyle.ipynb
