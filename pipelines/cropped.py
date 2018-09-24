@@ -1,5 +1,6 @@
 import os
 import csv
+from typing import Callable
 
 from torchvision import transforms
 
@@ -38,12 +39,15 @@ class Data(ImageDataSet):
     * `train (bool)`: Whether to load training or testing datasets.
     * `encode (bool)`: Whether to encode string labels to integers.
     * `binarize (bool)`: Whether to one-hot code integer labels to vectors.
+    * `transform (Callable)`: A function that transforms a PIL Image to tensor
+    while also applying any other transformations. By if None, simply converts
+    `PIL.Image` to `torch.Tensor`.
     """
 
     subdir = 'cropped'
 
     def __init__(self, root: str, info_csv: str, train: bool=True, encode: bool=True,
-        binarize: bool=False):
+        binarize: bool = False, transform: Callable = None):
 
         if train:
             root = os.path.join(root, 'train', self.__class__.subdir)
@@ -65,5 +69,5 @@ class Data(ImageDataSet):
         image_stream = ImageStreamer(fnames=self.fnames, root=root)
 
         super().__init__(images=image_stream, labels=labels, encode=encode,
-            binarize=binarize, num_output_channels=3)
+            binarize=binarize, num_output_channels=3, transform=transform)
         
