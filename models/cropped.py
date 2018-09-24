@@ -1,14 +1,7 @@
 import os
 import csv
-from glob import glob
 
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torchvision import transforms
-from torch.utils.data import Dataset
-from sklearn.preprocessing import LabelBinarizer
 
 from .loaders import ImageDataSet, ImageStreamer
 
@@ -30,7 +23,7 @@ class Data(ImageDataSet):
             test/
                 cropped/
                 resized/
-    
+
     The csv file containing labels should be of the form (column ordering does
     not matter):
 
@@ -72,5 +65,5 @@ class Data(ImageDataSet):
         image_stream = ImageStreamer(fnames=self.fnames, root=root)
 
         super().__init__(images=image_stream, labels=labels, encode=encode,
-            binarize=binarize)
+            binarize=binarize, num_output_channels=3)
         

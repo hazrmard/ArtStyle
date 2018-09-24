@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
 import numpy as np
 
-from models.loaders import ImageStreamer
-
 
 
 def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=(), cbar: bool=True, \
@@ -40,27 +38,6 @@ def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=(), cbar: bool=True,
     plt.yticks(tick_marks, labels)
     return im
 
-
-
-def get_image_stream(basedir: str, subset: Set[str]=None) -> ImageStreamer:
-    """
-    Creates an ImageStreamer from all images in a directory optionally filtered
-    using a subset.
-
-    Args:
-    * basedir (str): Directory containing images.
-    * subset (Set): Set of images to include - may or may not exist in basedir. If
-    empty, all images in basedir are used.
-
-    Returns:
-    * An ImageStreamer from the images in basedir optionally filtered.
-    """
-    fnames = set(os.listdir(basedir))
-    if subset is not None:
-        avail_fnames = fnames & subset
-    else:
-        avail_fnames = fnames
-    return ImageStreamer(avail_fnames, root=basedir)
 
 
 
