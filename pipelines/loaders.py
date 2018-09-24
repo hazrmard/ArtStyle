@@ -75,14 +75,16 @@ class ImageDataSet(Dataset):
     * `transform (Callable)`: A function that transforms a PIL Image to tensor
     while also applying any other transformations. By if None, simply converts
     `PIL.Image` to `torch.Tensor`.
-    * `num_output_channels (int)`: 1 or 3. Number of channels in output tensor.
+    * `num_output_channels (int)`: 1 or 3. Number of channels in output tensor for
+    grayscale input images. If 3, then grayscale images are converted to 3 channels
+    to be consistent with RGB images.
 
     Attributes:
 
     * `encoder (sklearn.preprocessing.LabelEncoder)`: Encodes string labels into
-    integers.
+    integers. E.g ['a', 'b'] => [0, 1]
     * `binarizer (sklearn.preprocessing.LabelBinarizer)`: Encodes categorical
-    labels in a one-hot format. E.g. ['a', 'b'] => [[1,0],[0,1]]
+    labels in a one-hot format. E.g. [0, 1] => [[1,0],[0,1]]
     """
 
     def __init__(self, images: ImageStreamer, labels: Iterable, encode: bool,
@@ -112,10 +114,12 @@ class ImageDataSet(Dataset):
 
     def __getitem__(self, idx) -> Tuple[Tensor, Tensor]:
         # pylint: disable=E1102,E1101
-        # Ensure that all images read have 3 channels. 1 channel grayscale images
-        # are converted to 3 channel grayscale images.
+        # 1 channel grayscale images are converted to 3 channel grayscale images,
+        # or 3 channel RGBs to 1 channel grayscale so RGB/Grayscale images can
+        # be read together as Channels x Height x Width tensors.
         img = self.images[idx]
-        if img.mode in ('1', 'L', 'P'):     # i.e. single channel
+        if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
+            (img.mode == 'RGB' and self.num_output_channels == 1):
             img = self.grayscale(img)
         img_tensor = self.transformer(img)
 
