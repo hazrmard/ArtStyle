@@ -59,8 +59,8 @@ def preprocess(q: Queue, dest_dirs: Tuple[str], log: Queue):
     * log: A Queue to log when an image is done.
     """
     # preprocessing parameters
-    resize = 128                # resizing square size
-    crop = 128                  # crop square size
+    resize = 224                # resizing square size
+    crop = 224                  # crop square size
     halfsize = int(crop / 2)
     crop_dir, resize_dir = dest_dirs
     
@@ -74,16 +74,18 @@ def preprocess(q: Queue, dest_dirs: Tuple[str], log: Queue):
         try:
             saved_crop = False
             # Image processing
-            im: Image.Image = Image.open(fpath)
+            im = Image.open(fpath)
             im.load()
-            # remove alpha channel
-            if im.mode in ('RGBA', 'P', 'LA'):
-                im = im.convert('RGB')        
+            # convert image to 3-channel rgb
+            if im.mode != 'RGB':
+                im = im.convert('RGB')
+            # transform image    
             cols, rows = im.size
             cx, cy = int(cols / 2), int(rows / 2)
             rect = (cx - halfsize, cy - halfsize, cx + halfsize, cy + halfsize)
             cropped = im.crop(rect)
             resized = im.resize((resize, resize))
+            # write to file
             cropped.save(os.path.join(crop_dir, fname))
             saved_crop = True
             resized.save(os.path.join(resize_dir, fname))

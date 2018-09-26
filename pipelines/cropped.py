@@ -2,8 +2,6 @@ import os
 import csv
 from typing import Callable
 
-from torchvision import transforms
-
 from .loaders import ImageDataSet, ImageStreamer
 
 
