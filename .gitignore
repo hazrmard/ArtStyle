@@ -12,3 +12,6 @@ img/
 *.ipynb
 !MNIST.ipynb
 !ArtStyle.ipynb
+*.ini
+*.ini
+config.ini

@@ -120,7 +120,7 @@ class Model:
 
 
     def train(self, dataset: torch.utils.data.Dataset, batch_size: int=10,
-        epochs: int=1):
+        epochs: int = 1, verbosity: int = 100):
         """
         Train the network using provided hyperparameters.
 
@@ -129,6 +129,7 @@ class Model:
         * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
         * `batch_size (int)`: Number of instances per minibatch.
         * `epochs (int)`: Number of times to iterate over dataset.
+        * `verbosity (int)`: Minibatches after which to print statistics.
         """
 
         trainloader = DataLoader(dataset, batch_size=batch_size)
@@ -147,6 +148,6 @@ class Model:
                 self.optimizer.step()                # update weights based on gradients
                 
                 running_loss += loss.item()
-                if i % 1000 == 0:
-                    print('Min-batch # {0:4d}\t Loss: {1:3.3f}'.format(i, running_loss / 1000))
+                if i % verbosity == 0:
+                    print('Min-batch # {0:4d}\t Loss: {1:3.3f}'.format(i, running_loss / verbosity))
                     running_loss = 0.

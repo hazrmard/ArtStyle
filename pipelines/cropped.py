@@ -2,6 +2,7 @@ import os
 import csv
 from typing import Callable
 
+from .mnist import Model
 from .loaders import ImageDataSet, ImageStreamer
 
 
