@@ -121,6 +121,8 @@ class ImageDataSet(Dataset):
         if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
             (img.mode == 'RGB' and self.num_output_channels == 1):
             img = self.grayscale(img)
+        if (img.mode in ('RGBA','CMYK')):
+            img = img.convert('RGB')
         img_tensor = self.transformer(img)
 
         return (img_tensor,
