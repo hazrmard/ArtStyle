@@ -113,16 +113,17 @@ class ImageDataSet(Dataset):
 
 
     def __getitem__(self, idx) -> Tuple[Tensor, Tensor]:
+        img = self.images[idx]
         # pylint: disable=E1102,E1101
         # 1 channel grayscale images are converted to 3 channel grayscale images,
         # or 3 channel RGBs to 1 channel grayscale so RGB/Grayscale images can
         # be read together as Channels x Height x Width tensors.
-        img = self.images[idx]
-        if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
-            (img.mode == 'RGB' and self.num_output_channels == 1):
-            img = self.grayscale(img)
-        if (img.mode in ('RGBA','CMYK')):
-            img = img.convert('RGB')
+        # Commented out for new dataset where all images are RGB
+        # if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
+        #     (img.mode == 'RGB' and self.num_output_channels == 1):
+        #     img = self.grayscale(img)
+        # if (img.mode in ('RGBA','CMYK')):
+        #     img = img.convert('RGB')
         img_tensor = self.transformer(img)
 
         return (img_tensor,

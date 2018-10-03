@@ -58,6 +58,7 @@ def get_config(*fnames: str) -> namedtuple:
             if s == 'paths':
                 val = os.path.expanduser(val)
                 val = os.path.expandvars(val)
+                val = os.path.abspath(val)
             else:
                 try:
                     val = int(val)
