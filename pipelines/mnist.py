@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 from torchvision.datasets import MNIST
 from sklearn.preprocessing import LabelBinarizer
 import numpy as np
+from tqdm.autonotebook import tqdm, trange
 
 
 class Net(nn.Module):
@@ -64,6 +65,8 @@ class Data(MNIST):
     * root (str): The root directory of the image files.
     * train (bool): Whether to load training or testing data.
     * download (bool): Whether to download to root if files not present.
+    * `binarize (bool)`: Whether to one-hot code integer labels. False (default)
+    for cross entropy loss.
     """
 
     # The following two transform functions are used by torch.utils.data.DataSet
@@ -87,6 +90,7 @@ class Data(MNIST):
 
     def __init__(self, root: str, train: bool=True, download: bool=True,
         binarize: bool=False):
+
         super().__init__(download=download, train=train, root=root,
             transform=self.__class__.transform,
             target_transform=self.__class__.target_transform if not binarize \
@@ -109,7 +113,7 @@ class Model:
     """
 
     def __init__(self, net: nn.Module, criterion: nn.modules.loss._Loss,
-        optimizer: torch.optim.Optimizer, cuda: bool):
+        optimizer: torch.optim.Optimizer, cuda: bool = True):
         
         self.net = net
         # pylint: disable=E1101
@@ -119,8 +123,8 @@ class Model:
         self.optimizer = optimizer
 
 
-    def train(self, dataset: torch.utils.data.Dataset, batch_size: int=10,
-        epochs: int = 1, verbosity: int = 100):
+    def train(self, dataset: torch.utils.data.Dataset, batch_size: int = 10,
+        epochs: int = 1, verbosity: int = 'auto', **kwargs):
         """
         Train the network using provided hyperparameters.
 
@@ -129,16 +133,24 @@ class Model:
         * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
         * `batch_size (int)`: Number of instances per minibatch.
         * `epochs (int)`: Number of times to iterate over dataset.
-        * `verbosity (int)`: Minibatches after which to print statistics.
+        * `verbosity (int)`: Minibatches after which to print statistics. If 'auto'
+        then prints only 10 updates.
+        * `kwargs`: Any keyword arguments to `DataLoader`.
         """
+        # get net's current training mode, and set it to train
+        curr_mode = self.net.training
+        self.net.train(True)
+
+        if verbosity == 'auto':
+            verbosity = max(len(dataset) // (batch_size * 10), 1)
 
         trainloader = DataLoader(dataset, batch_size=batch_size)
         self.net.to(self.device)
 
-        for epoch in range(epochs):
-            print('Epoch #', epoch)
+        for epoch in trange(epochs):
+            tqdm.write('Epoch # {}'.format(epoch))
             running_loss = 0.
-            for i, (batchX, batchY) in enumerate(trainloader, 1):
+            for i, (batchX, batchY) in enumerate(tqdm(trainloader), 1):
                 batchX, batchY = batchX.to(self.device), batchY.to(self.device)
                 
                 self.optimizer.zero_grad()           # clear gradients from prev. step
@@ -149,5 +161,84 @@ class Model:
                 
                 running_loss += loss.item()
                 if i % verbosity == 0:
-                    print('Min-batch # {0:4d}\t Loss: {1:3.3f}'.format(i, running_loss / verbosity))
+                    tqdm.write('Min-batch # {0:4d}\t Loss: {1:3.3f}'.format(i, running_loss / verbosity))
                     running_loss = 0.
+        # restore net's training mode
+        self.net.train(curr_mode)
+
+
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Predict labels for instances.
+        """
+        # get net's current training mode, and set it to train
+        curr_mode = self.net.training
+        self.net.train(False)
+        with torch.no_grad():
+            return self.net(x)
+        self.net.train(curr_mode)
+
+
+    def evaluate(self, dataset: torch.utils.data.Dataset, batch_size: int = 10,
+        topn: int = 1) -> float:
+        """
+        Evaluate the model using instances in dataset.
+
+        Args:
+
+        * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
+        * `batch_size (int)`: Number of instances per minibatch.
+        * `topn (int)`: Evaluate if top-N predictions per instance have actual label.
+        * `kwargs`: Any keyword arguments to `DataLoader`.
+
+        Returns:
+
+        * `accuracy (float)`: The fraction of predictions correct.
+        """
+        # get net's current training mode, and set it to train
+        curr_mode = self.net.training
+        self.net.train(False)
+
+        testloader = DataLoader(dataset, batch_size=batch_size)
+        self.net.to(self.device)
+        # pylint: disable=E1101
+        total = 0
+        with torch.no_grad():
+            for batchX, batchY in tqdm(testloader):
+                # convert to GPU tensor
+                batchX = batchX.to(self.device)
+                # convert to numpy array of batch_size x labels
+                # this is to add an explicit column dimension
+                batchY = batchY.view(len(batchY), -1).data.numpy()
+                # calculate scores for each class as numpy array batch_size x classes
+                scores = self.net(batchX).cpu().numpy()
+                # get ranked predictions of each class (last most likely)
+                pred = np.argsort(scores, axis=1)
+                # select top-n predictions batch_size x topn
+                topn_pred = pred[:, -topn:]
+                correct = np.any(batchY == topn_pred, axis=1)
+                total += correct.sum()
+        self.net.train(curr_mode)
+        return total / len(dataset)
+
+
+    def save(self, path: str):
+        net_state = self.net.state_dict()
+        if self.optimizer is not None:
+            opt_state = self.optimizer.state_dict()
+        else:
+            opt_state = {}
+        if self.criterion is not None:
+            cri_state = self.criterion.state_dict()
+        else:
+            cri_state = {}
+        torch.save((net_state, opt_state, cri_state), path)
+
+
+    def load(self, path: str):
+        net_state, opt_state, cri_state = torch.load(path, map_location='cpu')
+        self.net.load_state_dict(net_state)
+        if self.optimizer is not None:
+            self.optimizer.load_state_dict(opt_state)
+        if self.criterion is not None:
+            self.criterion.load_state_dict(cri_state)

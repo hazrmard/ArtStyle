@@ -3,14 +3,20 @@ __pycache__/
 output/
 img/
 
+# Binary files
 *.pdf
 *.xlsx
-*.ini
-!config.ini
 
+# Data files/demos
 *.csv
 *.ipynb
 !MNIST.ipynb
 !ArtStyle.ipynb
+
+# config files
 *.ini
 !config.ini
+
+# pytorch objects
+*.pt
+*pth
