@@ -41,9 +41,9 @@ class AlexNet(OldAlexNet):
         if pretrained:
             state = model_zoo.load_url(model_urls['alexnet'],
                                         model_dir=model_dir, map_location='cpu')
-            # delete final layer weights since num_classes is incompatible
-            del state['classifier.6.weight']
-            del state['classifier.6.bias']
+            # replace OldAlexNet final layer parameters with those for 136 classes
+            state['classifier.6.weight'] = self.state_dict()['classifier.6.weight']
+            state['classifier.6.bias'] = self.state_dict()['classifier.6.bias']
             self.load_state_dict(state)
 
 
