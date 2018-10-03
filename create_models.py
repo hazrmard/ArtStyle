@@ -11,8 +11,8 @@ import sys
 from lib.utils import save_model_params, ensure_dir
 
 home = os.path.expanduser('~')
-data_train = os.path.join(home,'Downloads', '') # TODO
-data_valid = os.path.join(home, 'Downloads', '') # TODO
+data_train = os.path.join(home, 'Downloads', 'art_images', 'train', 'resized') # TODO: test to validation
+data_valid = os.path.join(home, 'Downloads', 'art_images', 'test', 'resized') # TODO: test to validation
 model_folder = 'models'
 
 def choose_hyperparameters_from_file(hyperparameter_ranges_file):
@@ -21,6 +21,7 @@ def choose_hyperparameters_from_file(hyperparameter_ranges_file):
 
     # Load constants.
     input_size = ranges['input_size']
+    output_size = ranges['output_size']
 
     batch_norm = random.choice(ranges['batch_norm'])
     use_pooling = random.choice(ranges['use_pooling'])
@@ -120,6 +121,7 @@ def choose_hyperparameters_from_file(hyperparameter_ranges_file):
 
     hyperparameters = {
         'input_size': input_size,
+        'output_size': output_size,
 
         'batch_norm': batch_norm,
 

@@ -1,9 +1,9 @@
-import h5py
 import numpy as np
 import os
 from torch.utils.data import Dataset
 import torch
-
+from PIL import Image
+import pandas as pd
 
 class PaintingsDataset(Dataset):
     """Aperture domain dataset."""
@@ -65,3 +65,30 @@ class PaintingsDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data_tensor[idx], self.target_tensor[idx]
+
+
+class mnistmTrainingDataset(torch.utils.data.Dataset):
+    def __init__(self, text_file, root_dir):
+        """
+        Args:
+            text_file(string): path to text file
+            root_dir(string): directory with all train images
+        """
+        df = pd.read_csv(text_file, sep=',', usecols=['new_filename', 'style'])
+        df = df.query('in_train == TRUE')
+        df.head()
+        self.name_frame = df['new_filename']
+        self.label_frame = df['style']
+        self.image_folder = image_folder
+
+    def __len__(self):
+        return len(self.name_frame)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.image_folder, self.name_frame.iloc[idx, 0])
+        image = Image.open(img_name)
+        labels = self.label_frame.iloc[idx, 0]
+        #labels = labels.reshape(-1, 2)
+        sample = {'image': image, 'labels': labels}
+
+        return sample

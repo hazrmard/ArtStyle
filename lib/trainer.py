@@ -34,7 +34,7 @@ class Trainer():
 
         total_loss = 0
         for batch_idx, data in enumerate(self.loader_train):
-
+            t0 = time.time()
             inputs = Variable(data[0], requires_grad=False)
             targets = Variable(data[1], requires_grad=False)
             if self.cuda:
@@ -48,6 +48,8 @@ class Trainer():
             loss.backward()
             self.optimizer.step()
 
+            t_elapsed = time.time() - t0
+            print('trainer.train_epoch: %sth epoch: it took %ss to train %s images' % (batch_idx, t_elapsed, len(data[0])))
             # accumulate loss
             # total_loss += loss.data[0] # before PyTorch 0.4.0
             total_loss += loss.item() # PyTorch 0.4.0 and after
@@ -98,9 +100,9 @@ class Trainer():
             loss_train_eval = self.compute_loss(self.loader_train_eval)
             loss_val = self.compute_loss(self.loader_val)
             time_epoch = time.time() - t0
-            self.logger.add_entry({'loss_train' : loss_train,
-                                   'loss_train_eval' : loss_train_eval,
-                                   'loss_val' : loss_val})
+            self.logger.add_entry({'loss_train': loss_train,
+                                   'loss_train_eval': loss_train_eval,
+                                   'loss_val': loss_val})
 
             # save logger info
             self.logger.append(os.path.join(self.model_path, 'log.txt'))

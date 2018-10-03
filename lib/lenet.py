@@ -6,7 +6,7 @@ from lib.fully_connected_net import FullyConnectedNet
 
 class LeNet(nn.Module):
     def __init__(self, input_size,
-
+                       output_size,
                        batch_norm,
 
                        use_pooling,
@@ -32,6 +32,7 @@ class LeNet(nn.Module):
                        fcs_num_hidden_layers,
                        fcs_dropout):
 
+        # print('LeNet.__init__: conv2_stride =', conv2_stride)
         super(LeNet, self).__init__()
 
         self.input_size = input_size
@@ -55,7 +56,7 @@ class LeNet(nn.Module):
                             (input_size[0] - conv1_kernel_size) / conv1_stride + 1,
                             (input_size[1] - conv1_kernel_size) / conv1_stride + 1)
 
-        self.conv1 = nn.Conv2d(input_channel, conv1_num_kernels, kernel_size=conv1_kernel_size, stride=conv1_stride) # NOTE: THIS IS CORRECT!!!! CONV doesn't depend on num_features!
+        self.conv1 = nn.Conv2d(input_channel, conv1_num_kernels, kernel_size=conv1_kernel_size, stride=[conv1_stride]) # NOTE: THIS IS CORRECT!!!! CONV doesn't depend on num_features!
         nn.init.kaiming_normal_(self.conv1.weight.data)
         self.conv1.bias.data.fill_(0)
 
@@ -76,7 +77,9 @@ class LeNet(nn.Module):
                             (pool1_output_size[1] - conv2_kernel_size) / conv2_stride + 1,
                             (pool1_output_size[2] - conv2_kernel_size) / conv2_stride + 1)
 
-        self.conv2 = nn.Conv1d(conv1_num_kernels, conv2_num_kernels, kernel_size=conv2_kernel_size, stride=conv2_stride) # NOTE: THIS IS CORRECT!!!! CONV doesn't depend on num_features!
+        # print('\n\nbefore conv2. conv1_num_kernels =', conv1_num_kernels, '; conv2_num_kernels =', conv2_num_kernels, '; conv2_kernel_size =', conv2_kernel_size, '; conv2_stride =', conv2_stride)
+        self.conv2 = nn.Conv2d(conv1_num_kernels, conv2_num_kernels, kernel_size=conv2_kernel_size, stride=conv2_stride) # NOTE: THIS IS CORRECT!!!! CONV doesn't depend on num_features!
+        # print('\n\nafter conv2')
         nn.init.kaiming_normal_(self.conv2.weight.data)
         self.conv2.bias.data.fill_(0)
 
@@ -94,6 +97,7 @@ class LeNet(nn.Module):
 
         # FCs
         fcs_input_size = pool2_output_size[0] * pool2_output_size[1] * pool2_output_size[2]
+        # print('lenet: fcs_input_size = %s * %s * %s = %s' % (pool2_output_size[0],pool2_output_size[1], pool2_output_size[2], fcs_input_size))
         self.fcs = FullyConnectedNet(fcs_input_size,
                                      output_size,
 
@@ -110,23 +114,36 @@ class LeNet(nn.Module):
         # import code; code.interact(local=dict(globals(), **locals()))
         # num_elements = int(x.shape[1] / 2)
         # x = x.view(-1, 2, num_elements)
-
+        # BUG: Currently no batches
+        # print('forward: input: x.size() =', x.size())
         x = self.conv1(x)
+        # print('forward: after conv1: x.size() =', x.size())
         x = self.pool1(x)
+        # print('forward: after pool1: x.size() =', x.size())
         x = F.relu(x)
+        # print('forward: after relu: x.size() =', x.size())
         x = self.conv1_drop(x)
+        # print('forward: after conv1_drop: x.size() =', x.size())
         if self.batch_norm is True:
             x = self.batch_norm1(x)
+            # print('forward: after batch_norm1: x.size() =', x.size())
 
         x = self.conv2(x)
+        # print('forward: after conv2: x.size() =', x.size())
         x = self.pool2(x)
+        # print('forward: after pool2: x.size() =', x.size())
         x = F.relu(x)
+        # print('forward: after relu: x.size() =', x.size())
         x = self.conv2_drop(x)
+        # print('forward: after conv2_drop: x.size() =', x.size())
         if self.batch_norm is True:
             x = self.batch_norm2(x)
+            # print('forward: after batch_norm2: x.size() =', x.size())
 
-        x = x.view(-1, x.size(1) * x.size(2))
+        x = x.view(-1, x.size(1) * x.size(2) * x.size(3))
+        # print('forward: after flatten: x.size() =', x.size())
 
         x = self.fcs.forward(x)
+        # print('forward: after fcs: x.size() =', x.size())
 
-        return x
+        return F.log_softmax(x, dim=1)

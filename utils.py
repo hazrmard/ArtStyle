@@ -1,44 +1,16 @@
 """
 Defines some IO functions to help with reading large number of files.
 """
-from typing import Iterable, Callable, Set
 import os
-import multiprocessing as mp
+from typing import Iterable, Set
+from configparser import ConfigParser, ExtendedInterpolation
+from collections import namedtuple
+
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
-from imageio import imread
 import numpy as np
 
-class ImageStreamer(list):
-    """
-    Overloads a python list to iterate over image files as numpy arrays. The
-    class is instantiated with a list of image file paths. When an image is
-    indexed by an integer, a numpy array of the corresponding np.ndarray is
-    returned.
-
-    * ImageStreamer[integer] -> np.ndarray
-    * ImageStreamer[slice] -> ImageStreamer
-    """
-
-    def __init__(self, fnames: Iterable[str], basedir: str=''):
-        self.basedir = basedir
-        super().__init__(fnames)
-    
-
-    def __getitem__(self, x):
-        fnames = super().__getitem__(x)
-        if isinstance(fnames, list):
-            return ImageStreamer(fnames, basedir=self.basedir)
-        elif isinstance(fnames, str):
-            path = os.path.join(self.basedir, fnames)
-            return imread(path)
-        else:
-            print('Hey', x)
-    
-
-    def __iter__(self):
-        for fname in super().__iter__():
-            yield imread(os.path.join(self.basedir, fname))
+from lib.loaders import ImageStreamer
 
 
 
@@ -60,7 +32,7 @@ def plot_cmatrix(cmatrix: np.ndarray, labels: Iterable[str]=(), cbar: bool=True,
     if norm:
         im = plt.imshow(cmatrix, cmap=plt.cm.get_cmap('Blues'), vmin=0, vmax=1)
     else:
-        im = plt.imshow(cmatrix, cmap=plt.cm.get_cmap('Blues'))  
+        im = plt.imshow(cmatrix, cmap=plt.cm.get_cmap('Blues'))
     if cbar:
         plt.gcf().colorbar(im)
     tick_marks = np.arange(len(labels))
@@ -85,7 +57,39 @@ def get_image_stream(basedir: str, subset: Set[str]=None) -> ImageStreamer:
     """
     fnames = set(os.listdir(basedir))
     if subset is not None:
-        avail_fnames = fnames & subset          # downloaded filenames in training split
+        avail_fnames = fnames & subset
     else:
         avail_fnames = fnames
-    return ImageStreamer(avail_fnames, basedir=basedir)
+    return ImageStreamer(avail_fnames, root=basedir)
+
+
+
+def get_config(*fnames: str) -> namedtuple:
+    """
+    Reads the config file (.ini) and returns a `namedtuple` where config
+    properties can be accessed by name: `config.prop1...`,
+    """
+    parser = ConfigParser(interpolation=ExtendedInterpolation())
+    parser.read(fnames)
+
+    sections = parser.sections()
+    Config = namedtuple('Config', sections)
+    ConfigDict = {}
+    for s in sections:
+        options = {}
+        for opt, val in parser.items(s):
+            if s == 'paths':
+                val = os.path.expanduser(val)
+                val = os.path.expandvars(val)
+            else:
+                try:
+                    val = int(val)
+                except ValueError:
+                    try:
+                        val = float(val)
+                    except ValueError:
+                        pass
+            options[opt] = val
+        ntpl = namedtuple(s, options.keys())
+        ConfigDict[s] = ntpl(**options)
+    return Config(**ConfigDict)
