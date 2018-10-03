@@ -118,12 +118,12 @@ class ImageDataSet(Dataset):
         # 1 channel grayscale images are converted to 3 channel grayscale images,
         # or 3 channel RGBs to 1 channel grayscale so RGB/Grayscale images can
         # be read together as Channels x Height x Width tensors.
-        # Commented out for new dataset where all images are RGB
-        # if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
-        #     (img.mode == 'RGB' and self.num_output_channels == 1):
-        #     img = self.grayscale(img)
-        # if (img.mode in ('RGBA','CMYK')):
-        #     img = img.convert('RGB')
+        # NOTE: Not needed for v2 of the dataset with coerces all images to RGB.
+        if (img.mode in ('1', 'L', 'P') and self.num_output_channels == 3) or\
+            (img.mode == 'RGB' and self.num_output_channels == 1):
+            img = self.grayscale(img)
+        elif (img.mode in ('RGBA','CMYK')):
+            img = img.convert('RGB')
         img_tensor = self.transformer(img)
 
         return (img_tensor,
