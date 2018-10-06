@@ -1,5 +1,5 @@
 from .cropped import Data as CroppedData
-from .mnist import Model
+from .model import Model
 
 
 # The column headers in the csv file describing images.
