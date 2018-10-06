@@ -1,5 +1,12 @@
 # `pipeline`
 
+```
+Data    --->
+            |-->    Model
+Net     --->
+```
+
+
 A pipeline is a `module` that contains three classes:
 
 * `Net`: a `torch.nn.Module` representing the neural network.
