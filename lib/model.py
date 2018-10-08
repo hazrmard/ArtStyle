@@ -11,10 +11,11 @@ The class provides the following functions:
 * `save()/load()`: Save network parameters to file.
 """
 import sys
+from os.path import abspath, expanduser, expandvars
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import numpy as np
 from tqdm.autonotebook import tqdm, trange
 
@@ -46,33 +47,44 @@ class Model:
 
 
     def train(self, dataset: torch.utils.data.Dataset, batch_size: int = 10,
-        epochs: int = 1, verbosity: int = 'auto', **kwargs):
+        epochs: int = 1, xvalidate: float = 0., verbosity: int = 'auto', **kwargs):
         """
         Train the network using provided hyperparameters.
 
         Args:
 
-        * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
+        * `dataset (torch.utils.data.Dataset)`: The dataset containing instances.
         * `batch_size (int)`: Number of instances per minibatch.
         * `epochs (int)`: Number of times to iterate over dataset.
-        * `verbosity (int)`: Minibatches after which to print statistics. If 'auto'
+        * `xvalidate (int)`: Fraction of data set to randomly set aside for
+        validation at each epoch. Defaults to 0.
+        * `verbosity (int)`: Minibatches after which to print loss. If 'auto'
         then prints only 10 updates.
         * `kwargs`: Any keyword arguments to `DataLoader`.
         """
         # get net's current training mode, and set it to train
         curr_mode = self.net.training
         self.net.train(True)
-
-        if verbosity == 'auto':
-            verbosity = max(len(dataset) // (batch_size * 10), 1)
-
-        trainloader = DataLoader(dataset, batch_size=batch_size)
         self.net.to(self.device)
 
-        for epoch in trange(epochs, desc='Epochs'):
+        N = len(dataset)
+        N_val = int(N * xvalidate)
+        N_train = N - N_val
+
+        if verbosity == 'auto':
+            verbosity = max(N_train // (batch_size * 10), 1)
+        elif verbosity is None:
+            verbosity = N    # loss messages are never printed
+
+
+        for epoch in trange(epochs, desc='Epochs', leave=False):
+
+            trainset, valset = random_split(dataset, (N_train, N_val))
+            trainloader = DataLoader(trainset, batch_size=batch_size)
+
             running_loss = 0.
             for i, (batchX, batchY) in enumerate(
-                    tqdm(trainloader, desc='Epoch {}'.format(epoch+1), leave=False), 1):
+                tqdm(trainloader, desc='Epoch {}'.format(epoch + 1), leave=False), 1):
 
                 batchX, batchY = batchX.to(self.device), batchY.to(self.device)
 
@@ -86,8 +98,14 @@ class Model:
                 if i % verbosity == 0:
                     avg_loss = running_loss / verbosity
                     tqdm.write('Mini-batch # {0:4d}\t Loss: {1:3.3f}'.format(i,
-                    avg_loss), file=sys.stderr)
+                               avg_loss), file=sys.stderr)
                     running_loss = 0.
+
+            if N_val:
+                accuracy = self.evaluate(dataset=valset, batch_size=batch_size)
+                tqdm.write('Epoch {0:4d}\t Accuracy: {1:.3f}'.format(epoch + 1,
+                           accuracy), file=sys.stderr)
+
         # restore net's training mode
         self.net.train(curr_mode)
 
@@ -111,7 +129,7 @@ class Model:
 
         Args:
 
-        * `dataset (torch.utils.data.Dataset)`: The dataset object containing instances.
+        * `dataset (torch.utils.data.Dataset)`: The dataset containing instances.
         * `batch_size (int)`: Number of instances per minibatch.
         * `topn (int)`: Evaluate if top-N predictions per instance have actual label.
         * `kwargs`: Any keyword arguments to `DataLoader`.
@@ -129,7 +147,7 @@ class Model:
         # pylint: disable=E1101
         total = 0
         with torch.no_grad():
-            for batchX, batchY in tqdm(testloader, leave=False):
+            for batchX, batchY in tqdm(testloader, desc='Evaluating', leave=False):
                 # convert to GPU tensor
                 batchX = batchX.to(self.device)
                 # convert to numpy array of batch_size x labels
@@ -151,6 +169,7 @@ class Model:
         """
         Saves network weights and hyperparameters in a pickle file.
         """
+        path = abspath(expandvars(expanduser(path)))
         net_state = self.net.state_dict()
         if self.optimizer is not None:
             opt_state = self.optimizer.state_dict()
@@ -169,6 +188,7 @@ class Model:
         has to be instantiated with the same `net`, `criterion`, and `optimizer`
         arguments.
         """
+        path = abspath(expandvars(expanduser(path)))
         net_state, opt_state, cri_state = torch.load(path, map_location='cpu')
         self.net.load_state_dict(net_state)
         if self.optimizer is not None:
