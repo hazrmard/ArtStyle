@@ -1,14 +1,19 @@
+"""
+Defines the network, dataloader, and model for the cropped data set using
+WikiArt paintings.
+"""
 import os
 import csv
 from typing import Callable
 
-from .mnist import Model
-from .loaders import ImageDataSet, ImageStreamer
-
+from ..model import Model
+from ..loaders import ImageDataSet, ImageStreamer
+from ..net.alexnet import AlexNet as Net
 
 # The column headers in the csv file describing images.
 FNAME_COL = 'filename'
 LABEL_COL = 'style'
+
 
 
 class Data(ImageDataSet):

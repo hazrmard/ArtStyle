@@ -1,10 +1,10 @@
-# Python scripts
+# scripts
 
 This folder contains the following powershell and python scripts:
 
 * `download.ps1`: download training and test data sets,
 * `preprocess.py`: generate resized + cropped images from downloaded images.
-* `split.py`: split a CSV describing images into training and test sets,
+* `split.py`: split a CSV describing images into two non-overlapping files,
 * `categorize.py`: convert a directory of images into subdirectories by style labels.
 
 See scripts for more details.
