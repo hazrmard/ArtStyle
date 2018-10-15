@@ -47,7 +47,8 @@ class Model:
 
 
     def train(self, dataset: torch.utils.data.Dataset, batch_size: int = 10,
-        epochs: int = 1, xvalidate: float = 0., verbosity: int = 'auto', **kwargs):
+        epochs: int = 1, xvalidate: float = 0., verbosity: int = 'auto',
+        topn: int = 1, **kwargs):
         """
         Train the network using provided hyperparameters.
 
@@ -60,6 +61,7 @@ class Model:
         validation at each epoch. Defaults to 0.
         * `verbosity (int)`: Minibatches after which to print loss. If 'auto'
         then prints only 10 updates.
+        * `topn (int)`: top-N accuracy to report for validation set. Default 1.
         * `kwargs`: Any keyword arguments to `DataLoader`.
         """
         # get net's current training mode, and set it to train
@@ -102,7 +104,7 @@ class Model:
                     running_loss = 0.
 
             if N_val:
-                accuracy = self.evaluate(dataset=valset, batch_size=batch_size)
+                accuracy = self.evaluate(dataset=valset, batch_size=batch_size, topn=topn)
                 tqdm.write('Epoch {0:4d}\t Accuracy: {1:.3f}'.format(epoch + 1,
                            accuracy), file=sys.stderr)
 
@@ -112,20 +114,21 @@ class Model:
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Predict labels for instances.
+        Predict label scores for instances.
         """
         # get net's current training mode, and set it to train
         curr_mode = self.net.training
-        self.net.train(False)
         with torch.no_grad():
-            return self.net(x)
-        self.net.train(curr_mode)
+            self.net.train(False)
+            pred = self.net(x)
+            self.net.train(curr_mode)
+            return pred
 
 
     def evaluate(self, dataset: torch.utils.data.Dataset, batch_size: int = 10,
         topn: int = 1) -> float:
         """
-        Evaluate the model using instances in dataset.
+        Evaluate the model as classifier using instances in dataset.
 
         Args:
 

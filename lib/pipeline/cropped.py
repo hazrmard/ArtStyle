@@ -6,6 +6,8 @@ import os
 import csv
 from typing import Callable
 
+from torchvision.transforms import Compose, Normalize, ToTensor
+
 from ..model import Model
 from ..loaders import ImageDataSet, ImageStreamer
 from ..net.alexnet import AlexNet as Net
@@ -18,7 +20,7 @@ LABEL_COL = 'style'
 
 class Data(ImageDataSet):
     """
-    A `DataSet` instance that iterates over train/test images. Requies the
+    A `DataSet` instance that iterates over train/test images. Requires the
     root directory structure to be:
 
         root/
@@ -45,7 +47,7 @@ class Data(ImageDataSet):
     * `binarize (bool)`: Whether to one-hot code integer labels to vectors.
     * `transform (Callable)`: A function that transforms a PIL Image to tensor
     while also applying any other transformations. By if None, simply converts
-    `PIL.Image` to `torch.Tensor`.
+    `PIL.Image` to `torch.Tensor` after normalization for AlexNet.
     """
 
     subdir = 'cropped'
@@ -71,6 +73,13 @@ class Data(ImageDataSet):
         labels = [info[fname] for fname in self.fnames]
 
         image_stream = ImageStreamer(fnames=self.fnames, root=root)
+
+        # Normalize image according to training set for torchvision models.
+        # See https://pytorch.org/docs/stable/torchvision/models.html
+        if transform is None:
+            transform = Compose([ToTensor(),
+                                Normalize(mean=[0.485, 0.456, 0.406],
+                                          std=[0.229, 0.224, 0.225])])
 
         super().__init__(images=image_stream, labels=labels, encode=encode,
             binarize=binarize, num_output_channels=3, transform=transform)
