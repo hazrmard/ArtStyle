@@ -36,12 +36,11 @@ class Model:
     """
 
     def __init__(self, net: nn.Module, criterion: nn.modules.loss._Loss,
-        optimizer: torch.optim.Optimizer, cuda: bool = True):
+        optimizer: torch.optim.Optimizer, device: str = 'cuda:0'):
         
         self.net = net
         # pylint: disable=E1101
-        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and cuda)\
-                                    else "cpu")
+        self.device = torch.device(device)
         self.criterion = criterion
         self.optimizer = optimizer
 
@@ -79,7 +78,7 @@ class Model:
             verbosity = N    # loss messages are never printed
 
 
-        for epoch in trange(epochs, desc='Epochs', leave=False):
+        for epoch in trange(epochs, desc='Epochs', leave=True):
 
             trainset, valset = random_split(dataset, (N_train, N_val))
             trainloader = DataLoader(trainset, batch_size=batch_size)
