@@ -37,7 +37,7 @@ class AlexNet(OldAlexNet):
         # do not backpropagate gradients to feature detectors
         with torch.no_grad():
             x = self.features(x)
-        x = x.view(x.size(0), 256 * 6 * 6)
+        x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
 
