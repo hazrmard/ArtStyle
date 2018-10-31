@@ -134,6 +134,7 @@ def train(identifier):
                           loader_train_eval=loader_train_eval,
                           loader_val=loader_val,
                           cuda=using_cuda,
+                          model_path = new_model_folder_name,
                           logger=logger)
 
         # run training
